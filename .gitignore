@@ -1,0 +1,17 @@
+# Foundry
+out/
+cache/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Environment & Secrets
+.env
+*.pem
+*.key
