@@ -34,3 +34,25 @@ def test_erc8004_sdk():
     assert passport["component"] == "AgentReputationPassport"
     assert passport["props"]["reputation_score"] == "88.00%"
     assert passport["props"]["badge_color"] == "emerald"
+
+def test_erc8004_ema_boundary_clamping():
+    client = ERC8004ReputationClient(registry_address="0xRegistry123456789012345678901234567890", chain_id=5000)
+
+    # Test extreme boundary clamping in [0, 10000]
+    ema_zero = client.compute_updated_ema(current_ema=5000, total_evals=10, new_score=0)
+    assert 0 <= ema_zero <= 10000
+
+    ema_max = client.compute_updated_ema(current_ema=5000, total_evals=10, new_score=10000)
+    assert 0 <= ema_max <= 10000
+    assert ema_max > 5000
+
+
+def test_erc8004_evaluation_digest_deterministic():
+    client = ERC8004ReputationClient(registry_address="0xRegistry123456789012345678901234567890", chain_id=5000)
+    digest1 = client.compute_evaluation_digest(agent_id="0xAgent1", score=9200, rubric_hash="0xRubric1", nonce=0)
+    digest2 = client.compute_evaluation_digest(agent_id="0xAgent1", score=9200, rubric_hash="0xRubric1", nonce=0)
+    digest3 = client.compute_evaluation_digest(agent_id="0xAgent1", score=9200, rubric_hash="0xRubric1", nonce=1)
+
+    assert digest1 == digest2
+    assert digest1 != digest3
+
