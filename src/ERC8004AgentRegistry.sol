@@ -52,11 +52,6 @@ contract ERC8004AgentRegistry {
         bytes32 rubricHash
     );
 
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "Caller is not admin");
-        _;
-    }
-
     constructor(address _evalOracle) {
         require(_evalOracle != address(0), "Invalid eval oracle address");
         evalOracle = _evalOracle;

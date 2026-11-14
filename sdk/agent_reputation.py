@@ -7,10 +7,9 @@ and Google A2UI 1.0 Agent Reputation Passport generation.
 from __future__ import annotations
 
 import hashlib
-import json
 import time
-from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, List
 
 
 @dataclass
