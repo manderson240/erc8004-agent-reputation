@@ -48,6 +48,13 @@ class ERC8004ReputationClient:
             "created_at": int(time.time()),
         }
 
+    
+    def compute_evaluation_digest(
+        self, agent_id: str, score: int, rubric_hash: str, nonce: int
+    ) -> str:
+        """Computes deterministic digest for evaluation signature."""
+        packed = f"{agent_id}:{score}:{rubric_hash}:{nonce}:{self.chain_id}:{self.registry_address}"
+        return "0x" + hashlib.sha256(packed.encode("utf-8")).hexdigest()
     def compute_updated_ema(self, current_ema: int, total_evals: int, new_score: int) -> int:
         """Computes updated EMA matching ERC8004AgentRegistry (alpha = 0.20)."""
         if total_evals == 0:
