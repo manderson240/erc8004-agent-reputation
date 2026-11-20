@@ -154,12 +154,12 @@ SCENES = [
             <div class="header">
                 <span class="badge">Code Walkthrough • Mantle On-Chain Registry</span>
                 <h1>Core Smart Contract: ERC8004AgentRegistry.sol</h1>
-                <p class="subtitle">Verbatim Solidity implementation from <code>src/ERC8004AgentRegistry.sol</code> (lines 55–163, zero ellipses).</p>
+                <p class="subtitle">Verbatim Solidity implementation from <code>src/ERC8004AgentRegistry.sol</code> (lines 55 to 163, zero ellipses).</p>
             </div>
             <div class="code-grid-2">
                 <div class="code-box">
                     <div class="linux-bar">
-                        <span class="linux-tab">src/ERC8004AgentRegistry.sol (Lines 55–114)</span>
+                        <span class="linux-tab">src/ERC8004AgentRegistry.sol (Lines 55 to 114)</span>
                         <div class="linux-controls"><span>_</span><span>□</span><span>✕</span></div>
                     </div>
                     <pre style="font-size:13.2px;line-height:1.25;">{REGISTRY_PART1}</pre>
@@ -170,7 +170,7 @@ SCENES = [
                 </div>
                 <div class="code-box">
                     <div class="linux-bar">
-                        <span class="linux-tab">src/ERC8004AgentRegistry.sol (Lines 115–163)</span>
+                        <span class="linux-tab">src/ERC8004AgentRegistry.sol (Lines 115 to 163)</span>
                         <div class="linux-controls"><span>_</span><span>□</span><span>✕</span></div>
                     </div>
                     <pre style="font-size:13.6px;line-height:1.28;">{REGISTRY_PART2}</pre>
@@ -194,12 +194,12 @@ SCENES = [
             <div class="header">
                 <span class="badge">Code Walkthrough • Python Client &amp; A2UI Passport</span>
                 <h1>Verbatim Off-Chain SDK: sdk/agent_reputation.py</h1>
-                <p class="subtitle">Exact EMA parity with Solidity &amp; A2UI 1.0 passports (<code>sdk/agent_reputation.py</code> lines 15–72).</p>
+                <p class="subtitle">Exact EMA parity with Solidity &amp; A2UI 1.0 passports (<code>sdk/agent_reputation.py</code> lines 15 to 72).</p>
             </div>
             <div class="grid-2" style="gap:28px;height:980px;">
                 <div class="code-box">
                     <div class="linux-bar">
-                        <span class="linux-tab">sdk/agent_reputation.py (Lines 15–72)</span>
+                        <span class="linux-tab">sdk/agent_reputation.py (Lines 15 to 72)</span>
                         <div class="linux-controls"><span>_</span><span>□</span><span>✕</span></div>
                     </div>
                     <pre style="font-size:13.4px;line-height:1.28;">{SDK_CODE}</pre>
@@ -244,7 +244,7 @@ SCENES = [
             <div class="code-grid-2">
                 <div class="terminal-mini">
                     <div class="linux-bar">
-                        <span class="linux-tab">mantle-evm — Multi-Evaluation EMA Convergence</span>
+                        <span class="linux-tab">mantle-evm: Multi-Evaluation EMA Convergence</span>
                         <div class="linux-controls"><span>_</span><span>□</span><span>✕</span></div>
                     </div>
                     <div class="term-lines" style="font-size:17px;">
@@ -260,7 +260,7 @@ SCENES = [
                 </div>
                 <div class="terminal-mini danger-border">
                     <div class="linux-bar danger-header">
-                        <span class="linux-tab-danger">mantle-evm — Unregistered Agent &amp; Oracle Forgery</span>
+                        <span class="linux-tab-danger">mantle-evm: Unregistered Agent &amp; Oracle Forgery</span>
                         <div class="linux-controls"><span>_</span><span>□</span><span>✕</span></div>
                     </div>
                     <div class="term-lines" style="font-size:17px;">
