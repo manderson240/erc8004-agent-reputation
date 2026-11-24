@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Automated 2560x1440 (2K QHD) 6-Scene Code Walkthrough & Pitch Video Generator
-for ERC-8004 Agent Reputation Registry (The Turing Test: Mantle AI Agent Swarm Hackathon).
+for ERC-8004 Agent Reputation Registry (The Turing Test: Mantle AI Agent Swarm Hackathon & Aevum Track 4).
 """
 
 from __future__ import annotations
 
 import html
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -23,115 +24,134 @@ CHROME_CAPTURE_HEIGHT = 1527
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _resolve_chrome_bin() -> str:
+    env_bin = os.getenv("CHROME_HEADLESS_BIN")
+    if env_bin and Path(env_bin).is_file():
+        return env_bin
+    candidates = sorted(
+        Path.home().glob(
+            ".cache/ms-playwright/chromium_headless_shell-*/"
+            "chrome-headless-shell-linux64/chrome-headless-shell"
+        )
+    )
+    if candidates:
+        return str(candidates[-1])
+    found = shutil.which("chrome-headless-shell")
+    if found:
+        return found
+    raise FileNotFoundError(
+        "Playwright chrome-headless-shell not found; set CHROME_HEADLESS_BIN"
+    )
+
+
 def _load_slice(rel_path: str, start_line: int, end_line: int) -> str:
     """Load exact verbatim source lines (zero ellipses) and HTML-escape safely."""
     lines = (REPO_ROOT / rel_path).read_text(encoding="utf-8").splitlines()
     return html.escape("\n".join(lines[start_line - 1 : end_line]))
 
 
-REGISTRY_PART1 = _load_slice("src/ERC8004AgentRegistry.sol", 55, 114)
-REGISTRY_PART2 = _load_slice("src/ERC8004AgentRegistry.sol", 115, 163)
-SDK_CODE = _load_slice("sdk/agent_reputation.py", 15, 72)
+REGISTRY_PART1 = _load_slice("src/ERC8004AgentRegistry.sol", 75, 130)
+REGISTRY_PART2 = _load_slice("src/ERC8004AgentRegistry.sol", 155, 222)
+SDK_CODE = _load_slice("sdk/agent_reputation.py", 101, 166)
 
 SCENES = [
     {
         "id": "scene0_title_hero",
         "narration": (
-            "ERC-8004 Agent Reputation Registry. I built an on-chain registry for agent identity and reputation, aimed at Mantle. "
-            "Agents register an ID, one evaluation oracle signs their scores, and the contract keeps an Exponential Moving Average "
-            "between zero and ten thousand basis points with a constant-gas update. "
-            "The signature is bound to a per-agent nonce and the contract address, so an agent owner cannot score their own agent. "
-            "Six Foundry tests, including a two hundred fifty-six run fuzz test, and three Python tests all pass."
+            "ERC-8004 Agent Reputation Registry. I built an on-chain identity, Confirmation of Payee lookup, "
+            "and constant-gas reputation registry targeting Mantle and Aevum Builder Challenge Track Four. "
+            "Evaluations use oracle-signed EIP-191 keccak digests bound to a per-agent nonce, chain ID, and contract address, "
+            "with admin and oracle key rotation plus pre-flight verifyPayee checks for escrow buyers. "
+            "Nine Foundry tests, including a two hundred fifty-six run fuzz test, and four Solidity-parity Python tests all pass."
         ),
         "html_body": """
             <div class="header" style="text-align:center;margin-top:12px;margin-bottom:24px;">
-                <span class="badge" style="font-size:20px;padding:8px 26px;">The Turing Test: Mantle AI Agent Swarm Hackathon</span>
+                <span class="badge" style="font-size:20px;padding:8px 26px;">The Turing Test (Mantle) &amp; Aevum Track 4</span>
                 <h1 style="font-size:64px;margin-top:14px;margin-bottom:10px;letter-spacing:-2px;">ERC-8004 Agent Reputation Registry</h1>
                 <p class="subtitle" style="font-size:26px;margin:0 auto;max-width:1950px;color:#38bdf8;font-weight:500;">
-                    Constant-gas fixed-point EMA reputation and oracle-signed scores, built for Mantle
+                    Confirmation of Payee, Chain-ID Domain Separation, Oracle Rotation &amp; Constant-Gas EMA
                 </p>
             </div>
             <div class="grid-4" style="margin-top:20px;margin-bottom:20px;">
                 <div class="card" style="text-align:center;border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.08);">
-                    <h3 style="font-size:30px;color:#38bdf8;">O(1) EMA</h3>
-                    <p style="font-size:18px;color:#cbd5e1;">α=20% fixed-point [0, 10000] bps update with no storage arrays</p>
+                    <h3 style="font-size:30px;color:#38bdf8;">Confirm Payee</h3>
+                    <p style="font-size:18px;color:#cbd5e1;">verifyPayee(addr) resolves verified active agent, endpoint &amp; EMA</p>
                 </div>
                 <div class="card" style="text-align:center;border-color:rgba(34,197,94,0.4);background:rgba(34,197,94,0.08);">
-                    <h3 style="font-size:30px;color:#22c55e;">Oracle-Only Scoring</h3>
-                    <p style="font-size:18px;color:#cbd5e1;">ECDSA evalOracle signature + incrementing per-agent nonce</p>
+                    <h3 style="font-size:30px;color:#22c55e;">Chain-ID Bound</h3>
+                    <p style="font-size:18px;color:#cbd5e1;">EIP-191 keccak binds agentId, nonce, qagScore, block.chainid &amp; registry</p>
                 </div>
                 <div class="card" style="text-align:center;border-color:rgba(192,132,252,0.4);background:rgba(192,132,252,0.08);">
-                    <h3 style="font-size:30px;color:#c084fc;">Python Helpers</h3>
-                    <p style="font-size:18px;color:#cbd5e1;">Same EMA formula off-chain &amp; an A2UI-style passport dict</p>
+                    <h3 style="font-size:30px;color:#c084fc;">Key Rotation</h3>
+                    <p style="font-size:18px;color:#cbd5e1;">Admin-gated setEvalOracle &amp; transferAdmin + Solidity-parity Python SDK</p>
                 </div>
                 <div class="card" style="text-align:center;border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.08);">
-                    <h3 style="font-size:30px;color:#f59e0b;">6 + 3 Tests</h3>
-                    <p style="font-size:18px;color:#cbd5e1;">Foundry 6/6 (256 fuzz runs) + Pytest 3/3 passing</p>
+                    <h3 style="font-size:30px;color:#f59e0b;">9 + 4 Tests</h3>
+                    <p style="font-size:18px;color:#cbd5e1;">Foundry 9/9 (256 fuzz runs) + Pytest 4/4 (keccak parity &amp; recovery)</p>
                 </div>
             </div>
             <div class="flow-container" style="margin-top:16px;">
-                <div class="chip chip-green" style="font-size:17px;padding:10px 20px;">Targets Mantle (not yet deployed)</div>
-                <div class="chip chip-blue" style="font-size:17px;padding:10px 20px;">ERC-8004 idea + A2UI-style passport</div>
-                <div class="chip chip-green" style="font-size:17px;padding:10px 20px;">Bounded [0, 10000] Basis Points</div>
-                <div class="chip chip-blue" style="font-size:17px;padding:10px 20px;">1-Command: forge test &amp;&amp; uv run pytest</div>
+                <div class="chip chip-green" style="font-size:17px;padding:10px 20px;">verifyPayee Pre-Flight Check</div>
+                <div class="chip chip-blue" style="font-size:17px;padding:10px 20px;">block.chainid + Nonce Protection</div>
+                <div class="chip chip-green" style="font-size:17px;padding:10px 20px;">Bounded [0, 10000] O(1) EMA</div>
+                <div class="chip chip-blue" style="font-size:17px;padding:10px 20px;">forge test &amp;&amp; uv run pytest -q</div>
             </div>
         """,
     },
     {
         "id": "scene1_problem_workflow",
         "narration": (
-            "The problem I wanted to address. "
-            "If agents can post their own reviews, scores are easy to fake, and storing every evaluation in an on-chain array gets expensive. "
-            "Step one: Autonomous agents register unique bytes32 identities via registerAgent. "
-            "Step two: Independent evaluators sign evaluation digests covering agentId, incrementing nonce, score, rubric hash, and contract address. "
-            "Step three: ERC8004AgentRegistry verifies the signature via ecrecover and updates the reputation Exponential Moving Average in constant gas. "
-            "Anyone can still register agent IDs, so this stops self-scoring, not Sybil registration."
+            "Architecture and hardening. "
+            "Step one: An agent owner registers an ID, endpoint, and metadata URI, and sets a primary payee ID if owning multiple agents. "
+            "Step two: Wallets and payment escrows call verifyPayee to confirm an active worker address and inspect its reputation before sending funds. "
+            "Step three: Independent evaluators sign keccak256 digests over agent ID, nonce, score, rubric hash, block.chainid, and contract address. "
+            "Admin rotation lets governance rotate the evalOracle key without redeploying the registry."
         ),
         "html_body": """
             <div class="header">
-                <span class="badge">Architecture • Verifiable Agent Credit Registry</span>
-                <h1>Oracle-Signed Constant-Gas Agent Reputation</h1>
-                <p class="subtitle">Signed scores and a fixed-point EMA, tested in Foundry and aimed at Mantle.</p>
+                <span class="badge">Architecture | Verifiable Agent Identity &amp; Payee Verification</span>
+                <h1>Oracle-Signed Constant-Gas Registry &amp; Payee Lookup</h1>
+                <p class="subtitle">Domain-separated scoring, admin oracle key rotation, and pre-transfer verifyPayee checks.</p>
             </div>
             <div class="flow-container" style="margin-top:24px;">
                 <div class="flow-step">
                     <div class="flow-num">01</div>
-                    <h4>Agent Identity</h4>
-                    <p>registerAgent stores owner, endpoint, and metadataUri with duplicate-ID guard.</p>
-                    <div class="chip">ERC-8004 Agent ID</div>
+                    <h4>Identity &amp; Payee Link</h4>
+                    <p>registerAgent stores owner, endpoint, metadataUri, and ownerToAgentId mapping.</p>
+                    <div class="chip">setPayeeAgent Support</div>
                 </div>
-                <div class="flow-arrow">➔</div>
+                <div class="flow-arrow">-&gt;</div>
                 <div class="flow-step highlight">
                     <div class="flow-num">02</div>
-                    <h4>Oracle ECDSA + Nonce</h4>
-                    <p>recordEvaluation increments agentNonces[agentId] and checks ecrecover == evalOracle.</p>
-                    <div class="chip chip-blue">Anti-Replay &amp; No Self-Scoring</div>
+                    <h4>Pre-Flight verifyPayee</h4>
+                    <p>Escrows call verifyPayee(worker) to check verified status, active flag, and EMA bps.</p>
+                    <div class="chip chip-blue">Confirmation of Payee</div>
                 </div>
-                <div class="flow-arrow">➔</div>
+                <div class="flow-arrow">-&gt;</div>
                 <div class="flow-step">
                     <div class="flow-num">03</div>
-                    <h4>O(1) Fixed-Point EMA</h4>
-                    <p>Computes (score*2000 + prior*8000)/10000 inside strict [0, 10000] bounds.</p>
-                    <div class="chip chip-green">Constant Gas Update</div>
+                    <h4>Chain-ID ECDSA + O(1) EMA</h4>
+                    <p>recordEvaluation checks block.chainid + nonce + evalOracle before fixed-point EMA.</p>
+                    <div class="chip chip-green">setEvalOracle Rotation</div>
                 </div>
             </div>
             <div class="grid-2" style="margin-top:24px;">
-                <div class="card danger">
-                    <h3>Common Registry Problems</h3>
+                <div class="card success">
+                    <h3>Hardened Features</h3>
                     <ul>
-                        <li><strong>Self-Rating:</strong> Agents post fake positive reviews of themselves</li>
-                        <li><strong>O(N) Loops:</strong> Iterating historical arrays runs out of gas at scale</li>
-                        <li><strong>Signature Replay:</strong> Missing per-agent nonce lets attackers resubmit old scores</li>
-                        <li><strong>Overflow Drift:</strong> Unbounded scoring breaks downstream credit weights</li>
+                        <li><strong>Cross-chain replay lock:</strong> digest binds <code>block.chainid</code> and <code>address(this)</code></li>
+                        <li><strong>Admin key rotation:</strong> <code>setEvalOracle</code> and <code>transferAdmin</code> rotate signers safely</li>
+                        <li><strong>Python digest parity:</strong> <code>Web3.solidity_keccak</code> + <code>eth_account</code> produces valid contract signatures</li>
+                        <li><strong>RPC Payee helper:</strong> <code>verify_payee_rpc</code> queries <code>verifyPayee(address)</code> over JSON-RPC</li>
                     </ul>
                 </div>
-                <div class="card success">
-                    <h3>What ERC8004AgentRegistry Does</h3>
+                <div class="card danger">
+                    <h3>Honest Scope and Limits</h3>
                     <ul>
-                        <li><strong>Oracle Signed:</strong> Only signed <code>evalOracle</code> attestations mutate reputation</li>
-                        <li><strong>O(1) State:</strong> Fixed-point α=0.20 EMA, a fixed number of storage writes per update</li>
-                        <li><strong>Strict Nonces:</strong> Monotonic <code>agentNonces</code> in the signed message block replays</li>
-                        <li><strong>Bounded Math:</strong> <code>reputationEmaBps &lt;= 10000</code> checked by a 256-run fuzz test</li>
+                        <li><strong>Local EVM only:</strong> tested in Foundry EVM; live Mantle/Aevum broadcast awaits funded burner key</li>
+                        <li><strong>Anti-self-scoring:</strong> stops fake self-ratings, not permissionless multi-address registration (Sybil)</li>
+                        <li><strong>Deploy script ready:</strong> <code>script/DeployERC8004.s.sol</code> configures oracle from env</li>
+                        <li><strong>Off-chain calls:</strong> SDK queries live nodes only when an RPC URL is provided</li>
                     </ul>
                 </div>
             </div>
@@ -140,38 +160,38 @@ SCENES = [
     {
         "id": "scene2_core_source_code",
         "narration": (
-            "Now let us walk through the verbatim Solidity contract in src/ERC8004AgentRegistry.sol lines fifty-five through one hundred sixty-three. "
-            "On the left, the constructor, registerAgent, and updateAgent reject zero or duplicate IDs and allow updates only by the owner or admin. "
-            "On the right, recordEvaluation increments per-agent evaluation nonces, checks oracle ecrecover over contract-bound digests, "
-            "and computes the exact integer fixed-point Exponential Moving Average update."
+            "Here is src/ERC8004AgentRegistry.sol, lines seventy-five through two hundred twenty-two. "
+            "On the left, admin-gated setEvalOracle and transferAdmin rotate governance cleanly, alongside registerAgent and setPayeeAgent. "
+            "On the right, recordEvaluation verifies EIP-191 oracle signatures with block.chainid domain separation "
+            "and updates the constant-gas EMA, followed by verifyPayee for active, inactive, and unknown address lookups."
         ),
         "html_body": f"""
             <div class="header">
-                <span class="badge">Code Walkthrough • On-Chain Registry</span>
+                <span class="badge">Code Walkthrough | On-Chain Registry</span>
                 <h1>Core Smart Contract: ERC8004AgentRegistry.sol</h1>
-                <p class="subtitle">Verbatim Solidity implementation from <code>src/ERC8004AgentRegistry.sol</code> (lines 55 to 163, zero ellipses).</p>
+                <p class="subtitle">Verbatim Solidity source from <code>src/ERC8004AgentRegistry.sol</code> (lines 75 to 130 and 155 to 222).</p>
             </div>
             <div class="code-grid-2">
                 <div class="code-box">
                     <div class="linux-bar">
-                        <span class="linux-tab">src/ERC8004AgentRegistry.sol (Lines 55 to 114)</span>
-                        <div class="linux-controls"><span>_</span><span>□</span><span>✕</span></div>
+                        <span class="linux-tab">ERC8004AgentRegistry.sol (Lines 75 to 130)</span>
+                        <div class="linux-controls"><span>-</span><span>[]</span><span>x</span></div>
                     </div>
-                    <pre style="font-size:13.2px;line-height:1.25;">{REGISTRY_PART1}</pre>
+                    <pre style="font-size:11.8px;line-height:1.22;padding:12px 16px;">{REGISTRY_PART1}</pre>
                     <div class="eval-flow">
-                        <span class="flow-pill pass">[OK] Agent Identity</span>
-                        <span class="flow-pill pass">[OK] Owner Auth Check</span>
+                        <span class="flow-pill pass">[OK] Admin &amp; Oracle Rotation</span>
+                        <span class="flow-pill pass">[OK] Primary Payee Mapping</span>
                     </div>
                 </div>
                 <div class="code-box">
                     <div class="linux-bar">
-                        <span class="linux-tab">src/ERC8004AgentRegistry.sol (Lines 115 to 163)</span>
-                        <div class="linux-controls"><span>_</span><span>□</span><span>✕</span></div>
+                        <span class="linux-tab">ERC8004AgentRegistry.sol (Lines 155 to 222)</span>
+                        <div class="linux-controls"><span>-</span><span>[]</span><span>x</span></div>
                     </div>
-                    <pre style="font-size:13.6px;line-height:1.28;">{REGISTRY_PART2}</pre>
+                    <pre style="font-size:10.8px;line-height:1.15;padding:12px 16px;">{REGISTRY_PART2}</pre>
                     <div class="eval-flow">
-                        <span class="flow-pill pass">[OK] Nonce-Bound ECDSA</span>
-                        <span class="flow-pill pass">[OK] O(1) α=2000 bps EMA</span>
+                        <span class="flow-pill pass">[OK] block.chainid ECDSA</span>
+                        <span class="flow-pill pass">[OK] verifyPayee Lookup</span>
                     </div>
                 </div>
             </div>
@@ -180,44 +200,42 @@ SCENES = [
     {
         "id": "scene3_verifier_source_code",
         "narration": (
-            "Alongside the Solidity contract is sdk/agent_reputation.py lines fifteen through seventy-two. "
-            "ERC8004ReputationClient builds JSON agent manifests, "
-            "computes the same fixed-point EMA update as the Solidity integer division, "
-            "and builds A2UI-style AgentReputationPassport dicts. "
-            "Its digest helper uses SHA-256 and does not match the contract's keccak message, so it cannot produce signatures the contract accepts. "
-            "It does not connect to a chain."
+            "Next is sdk/agent_reputation.py, lines one hundred one through one hundred sixty-six. "
+            "compute_evaluation_digest uses Web3.solidity_keccak over the exact Solidity field layout, "
+            "sign_evaluation and recover_oracle_signer create and verify EIP-191 proofs via eth_account, "
+            "verify_payee_rpc calls the contract view directly, and compute_updated_ema matches the Solidity integer math."
         ),
         "html_body": f"""
             <div class="header">
-                <span class="badge">Code Walkthrough • Python Helpers &amp; A2UI-Style Passport</span>
-                <h1>Off-Chain Helpers: sdk/agent_reputation.py</h1>
-                <p class="subtitle">Same EMA formula as Solidity &amp; an A2UI-style passport dict (<code>sdk/agent_reputation.py</code> lines 15 to 72).</p>
+                <span class="badge">Code Walkthrough | Solidity-Parity Python SDK</span>
+                <h1>sdk/agent_reputation.py</h1>
+                <p class="subtitle">Verbatim Python code from <code>sdk/agent_reputation.py</code> (lines 101 to 166).</p>
             </div>
             <div class="grid-2" style="gap:28px;height:980px;">
                 <div class="code-box">
                     <div class="linux-bar">
-                        <span class="linux-tab">sdk/agent_reputation.py (Lines 15 to 72)</span>
-                        <div class="linux-controls"><span>_</span><span>□</span><span>✕</span></div>
+                        <span class="linux-tab">sdk/agent_reputation.py (Lines 101 to 166)</span>
+                        <div class="linux-controls"><span>-</span><span>[]</span><span>x</span></div>
                     </div>
-                    <pre style="font-size:13.4px;line-height:1.28;">{SDK_CODE}</pre>
+                    <pre style="font-size:11.6px;line-height:1.18;padding:12px 16px;">{SDK_CODE}</pre>
                     <div class="eval-flow">
-                        <span class="flow-pill pass">[OK] Same Integer EMA</span>
-                        <span class="flow-pill pass">[OK] Passport Dict</span>
+                        <span class="flow-pill pass">[OK] Keccak EIP-191 Parity</span>
+                        <span class="flow-pill pass">[OK] verify_payee_rpc</span>
                     </div>
                 </div>
                 <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;">
                     <div>
-                        <h3>Properties the Tests Check</h3>
+                        <h3>Hardened Contract &amp; SDK Properties</h3>
                         <ul>
-                            <li><strong>Bound:</strong> Since <code>0 ≤ score ≤ 10000</code> and <code>ALPHA_BPS = 2000</code>, <code>reputationEmaBps</code> stays inside <code>[0, 10000]</code>.</li>
-                            <li><strong>Replay Resistance:</strong> Sequential <code>agentNonces[agentId]++</code> prevents double-counting signed rubrics.</li>
-                            <li><strong>Oracle Only:</strong> Scores for unregistered agents or with a wrong signer revert.</li>
-                            <li><strong>Known gap:</strong> the Python digest helper does not match the contract message.</li>
+                            <li><strong>Byte-for-byte digest parity:</strong> tested against <code>keccak256(abi.encodePacked(...))</code> with <code>block.chainid</code></li>
+                            <li><strong>Rotation safe:</strong> admin can rotate <code>evalOracle</code> or transfer admin control cleanly</li>
+                            <li><strong>Inactive payee check:</strong> <code>verifyPayee</code> returns <code>verified=false</code> when an agent is deactivated or unknown</li>
+                            <li><strong>EMA invariant:</strong> stays bounded in <code>[0, 10000]</code> across 256 fuzz runs</li>
                         </ul>
                     </div>
                     <div class="card success" style="padding:20px;">
-                        <h4 style="color:#22c55e;font-size:20px;margin-bottom:6px;">Fuzz Test</h4>
-                        <p style="font-size:17px;">256 Foundry runs with two random scores (bounded to 0 to 10000) check the EMA formula and the upper bound.</p>
+                        <h4 style="color:#22c55e;font-size:20px;margin-bottom:6px;">Deployment Ready</h4>
+                        <p style="font-size:17px;">script/DeployERC8004.s.sol is included for Mantle or Aevum broadcast once a funded burner key and starter-kit RPC URL are placed in .env.</p>
                     </div>
                 </div>
             </div>
@@ -227,47 +245,43 @@ SCENES = [
         "id": "scene4_honest_vs_adversarial_exec",
         "narration": (
             "Side-by-side Foundry tests. "
-            "On the left, test Record Multiple Evaluations records nine thousand and then eight thousand basis points, "
-            "and the test asserts the on-chain average is eight thousand eight hundred. "
-            "On the right, scoring an unregistered agent, or a score signed by the wrong key, reverts."
+            "On the left, EMA evaluation updates to eight thousand eight hundred bps, oracle key rotation transfers authority cleanly, "
+            "and verifyPayee distinguishes active, inactive, and unknown accounts. "
+            "On the right, signatures generated for a different chain ID, wrong signing keys, or unregistered agents revert."
         ),
         "html_body": """
             <div class="header">
-                <span class="badge">Foundry Tests • Valid EMA Update vs. Rejected Scores</span>
-                <h1>Valid EMA Update vs. Rejected Scores</h1>
-                <p class="subtitle">What the tests in test/ERC8004AgentRegistry.t.sol set up and assert.</p>
+                <span class="badge">Foundry Tests | Payee &amp; Rotation vs. Adversarial Reverts</span>
+                <h1>EMA + Rotation + Payee vs. Replay &amp; Unregistered Reverts</h1>
+                <p class="subtitle">Real tests enforced in test/ERC8004AgentRegistry.t.sol.</p>
             </div>
             <div class="code-grid-2">
                 <div class="terminal-mini">
                     <div class="linux-bar">
-                        <span class="linux-tab">forge test: two evaluations</span>
-                        <div class="linux-controls"><span>_</span><span>□</span><span>✕</span></div>
+                        <span class="linux-tab">EMA, Rotation &amp; verifyPayee</span>
+                        <div class="linux-controls"><span>-</span><span>[]</span><span>x</span></div>
                     </div>
-                    <div class="term-lines" style="font-size:17px;">
-                        <p class="t-line"><span class="t-prompt">$</span> forge test --match-test test_RecordMultipleEvaluationsEMA</p>
-                        <p class="t-line t-cyan">Test step 1: recordEvaluation(score=9000, nonce=0)</p>
-                        <p class="t-line t-indent">first score becomes the EMA: <span class="t-green">9000 bps</span></p>
-                        <p class="t-line t-cyan">Test step 2: recordEvaluation(score=8000, nonce=1)</p>
-                        <p class="t-line t-indent">(8000*2000 + 9000*8000)/10000</p>
-                        <p class="t-line t-indent">assertEq(reputationEmaBps, <span class="t-green">8800</span>)</p>
-                        <p class="t-line">[PASS] test_RecordMultipleEvaluationsEMA() (gas: 213138)</p>
-                        <div class="t-banner-pass">PASS: EMA UPDATED</div>
+                    <div class="term-lines" style="font-size:16.5px;">
+                        <p class="t-line"><span class="t-prompt">$</span> forge test --match-test "EMA|Rotation|VerifyPayee"</p>
+                        <p class="t-line"><span class="t-green">[PASS]</span> test_RecordMultipleEvaluationsEMA() (gas: 217593)</p>
+                        <p class="t-line t-indent">9000 -&gt; 8000 (20% alpha) == <span class="t-green">8800 bps</span></p>
+                        <p class="t-line"><span class="t-green">[PASS]</span> test_AdminAndOracleRotation() (gas: 112436)</p>
+                        <p class="t-line"><span class="t-green">[PASS]</span> test_VerifyPayeeActiveInactiveAndUnknown() (gas: 105545)</p>
+                        <p class="t-banner-pass">PASS: O(1) EMA, KEY ROTATION &amp; PAYEE CHECK</p>
                     </div>
                 </div>
                 <div class="terminal-mini danger-border">
                     <div class="linux-bar danger-header">
-                        <span class="linux-tab-danger">forge test: rejected scores</span>
-                        <div class="linux-controls"><span>_</span><span>□</span><span>✕</span></div>
+                        <span class="linux-tab-danger">Wrong ChainId, Bad Signer &amp; Missing Agent</span>
+                        <div class="linux-controls"><span>-</span><span>[]</span><span>x</span></div>
                     </div>
-                    <div class="term-lines" style="font-size:17px;">
+                    <div class="term-lines" style="font-size:16.5px;">
                         <p class="t-line"><span class="t-prompt">$</span> forge test --match-test test_RevertOn</p>
-                        <p class="t-line t-yellow">Test 1: score an agentId that was never registered</p>
-                        <p class="t-line t-indent t-red">expectRevert("Agent does not exist")</p>
-                        <p class="t-line">[PASS] test_RevertOnUnregisteredAgent() (gas: 37745)</p>
-                        <p class="t-line t-yellow">Test 2: score signed by key 0xBEEF, not the oracle</p>
-                        <p class="t-line t-indent t-red">expectRevert("Invalid evaluation oracle signature")</p>
-                        <p class="t-line">[PASS] test_RevertOnInvalidOracleSignature() (gas: 65960)</p>
-                        <div class="t-banner-fail">BOTH SCORES REJECTED</div>
+                        <p class="t-line"><span class="t-green">[PASS]</span> test_RevertOnWrongChainIdSignature() (gas: 70474)</p>
+                        <p class="t-line t-indent t-red">rejects cross-chain replayed oracle signatures</p>
+                        <p class="t-line"><span class="t-green">[PASS]</span> test_RevertOnInvalidOracleSignature() (gas: 68214)</p>
+                        <p class="t-line"><span class="t-green">[PASS]</span> test_RevertOnUnregisteredAgent() (gas: 37800)</p>
+                        <div class="t-banner-fail">ALL ADVERSARIAL CASES REJECTED</div>
                     </div>
                 </div>
             </div>
@@ -276,45 +290,47 @@ SCENES = [
     {
         "id": "scene5_verification_and_impact",
         "narration": (
-            "Running the tests. "
-            "Foundry runs all six tests, including the two hundred fifty-six run fuzz test, "
-            "and Pytest runs the three Python helper tests. All pass. "
-            "The contract is not deployed yet, and it uses a single trusted oracle key. "
-            "You can reproduce this locally with forge test and uv run pytest."
+            "Full test results. "
+            "All nine Foundry contract tests, including the two hundred fifty-six run fuzz test, pass in twelve point two five milliseconds. "
+            "All four Python tests verify EMA bounds, keccak digest parity, and ECDSA recovery in zero point four one seconds. "
+            "Reproduce all tests locally from manderson240/erc8004-agent-reputation."
         ),
         "html_body": """
             <div class="header">
-                <span class="badge">Verification • Foundry + Pytest</span>
-                <h1>Foundry (6/6) + Pytest (3/3)</h1>
-                <p class="subtitle">Tests for the Solidity contract and the off-chain Python helpers.</p>
+                <span class="badge">Verification | Foundry (9/9) + Pytest (4/4)</span>
+                <h1>Foundry (9/9) + Pytest (4/4) Passing</h1>
+                <p class="subtitle">Verified across Solidity contracts and Solidity-parity Python SDK tests.</p>
             </div>
             <div class="grid-2" style="margin-top:18px;gap:26px;">
                 <div class="terminal-window" style="height:640px;">
                     <div class="linux-bar">
-                        <span class="linux-tab">forge test &amp;&amp; uv run pytest</span>
-                        <div class="linux-controls"><span>_</span><span>□</span><span>✕</span></div>
+                        <span class="linux-tab">forge test &amp;&amp; uv run pytest -q</span>
+                        <div class="linux-controls"><span>-</span><span>[]</span><span>x</span></div>
                     </div>
-                    <div class="terminal-content" style="font-size:14.8px;line-height:1.45;">
-                        <p class="cmd">$ forge test -v</p>
-                        <p><span class="pass">[PASS]</span> test_RegisterAgent() (gas: 35746)</p>
-                        <p><span class="pass">[PASS]</span> test_RecordSingleEvaluation() (gas: 158716)</p>
-                        <p><span class="pass">[PASS]</span> test_RecordMultipleEvaluationsEMA() (gas: 213138)</p>
-                        <p><span class="pass">[PASS]</span> test_RevertOnUnregisteredAgent() (gas: 37745)</p>
-                        <p><span class="pass">[PASS]</span> test_RevertOnInvalidOracleSignature() (gas: 65960)</p>
+                    <div class="terminal-content" style="font-size:13.0px;line-height:1.28;">
+                        <p class="cmd">$ forge test</p>
                         <p><span class="pass">[PASS]</span> testFuzz_EvaluationEMA(uint256,uint256) (runs: 256)</p>
-                        <p class="cmd" style="margin-top:8px;">$ uv run pytest tests/test_reputation_sdk.py -v</p>
-                        <p><span class="pass">PASSED</span> 3/3 manifest, EMA, passport &amp; digest tests</p>
-                        <p class="success-banner">Foundry 6 passed • Pytest 3 passed</p>
+                        <p><span class="pass">[PASS]</span> test_AdminAndOracleRotation() (gas: 112436)</p>
+                        <p><span class="pass">[PASS]</span> test_RecordMultipleEvaluationsEMA() (gas: 217593)</p>
+                        <p><span class="pass">[PASS]</span> test_RecordSingleEvaluation() (gas: 160953)</p>
+                        <p><span class="pass">[PASS]</span> test_RegisterAgent() (gas: 35785)</p>
+                        <p><span class="pass">[PASS]</span> test_RevertOnInvalidOracleSignature() (gas: 68214)</p>
+                        <p><span class="pass">[PASS]</span> test_RevertOnUnregisteredAgent() (gas: 37800)</p>
+                        <p><span class="pass">[PASS]</span> test_RevertOnWrongChainIdSignature() (gas: 70474)</p>
+                        <p><span class="pass">[PASS]</span> test_VerifyPayeeActiveInactiveAndUnknown() (gas: 105545)</p>
+                        <p class="cmd" style="margin-top:6px;">$ uv run pytest -q</p>
+                        <p><span class="pass">4 passed</span> in 0.41s (EMA bounds, passport, keccak parity, ECDSA recovery)</p>
+                        <p class="success-banner">Foundry 9 passed (12.25ms) | Pytest 4 passed (0.41s)</p>
                     </div>
                 </div>
                 <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;height:640px;">
                     <div>
-                        <h3 style="color:#38bdf8;">Limits</h3>
+                        <h3 style="color:#38bdf8;">Summary &amp; Repository</h3>
                         <ul>
-                            <li><strong>Deployment:</strong> not deployed; tested in Foundry's local EVM only</li>
-                            <li><strong>Oracle:</strong> one trusted <code>evalOracle</code> key, no rotation</li>
-                            <li><strong>Signed message:</strong> binds the contract address, not the chain ID</li>
-                            <li><strong>Registry Contract:</strong> <code>src/ERC8004AgentRegistry.sol</code></li>
+                            <li><strong>Deployment:</strong> tested in local Foundry EVM; <code>DeployERC8004.s.sol</code> ready for testnet broadcast</li>
+                            <li><strong>Rotation:</strong> admin can rotate <code>evalOracle</code> via <code>setEvalOracle</code></li>
+                            <li><strong>Replay security:</strong> signed digest binds <code>nonce</code>, <code>block.chainid</code> &amp; <code>address(this)</code></li>
+                            <li><strong>Payee verification:</strong> <code>verifyPayee</code> supports Aevum Track 4 integration</li>
                             <li><strong>GitHub Repository:</strong> <code>manderson240/erc8004-agent-reputation</code></li>
                         </ul>
                     </div>
@@ -351,14 +367,13 @@ h1 { font-size:46px; font-weight:800; color:#ffffff; margin-bottom:6px; letter-s
 .flow-num { font-size:20px; font-weight:900; color:#38bdf8; margin-bottom:4px; }
 .flow-step h4 { font-size:22px; color:#f8fafc; margin-bottom:4px; }
 .flow-step p { font-size:16px; color:#94a3b8; margin-bottom:8px; line-height:1.35; }
-.flow-arrow { font-size:30px; color:#64748b; padding:0 12px; font-weight:bold; }
+.flow-arrow { font-size:26px; color:#64748b; padding:0 12px; font-weight:bold; font-family:monospace; }
 .chip { display:inline-block; padding:6px 14px; background:#1e293b; border-radius:8px; font-size:14px; font-weight:600; color:#cbd5e1; }
 .chip-blue { background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); }
 .chip-green { background:rgba(34,197,94,0.2); color:#22c55e; border:1px solid rgba(34,197,94,0.4); }
 .card { background:rgba(30,41,59,0.65); border:1px solid rgba(148,163,184,0.2); border-radius:18px; padding:24px; }
 .card.danger { background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.35); }
 .card.success { background:rgba(34,197,94,0.08); border-color:rgba(34,197,94,0.35); }
-.card-icon { font-size:36px; margin-bottom:8px; }
 .card h3 { font-size:26px; color:#f1f5f9; margin-bottom:10px; font-weight:700; }
 .card p { font-size:18px; color:#cbd5e1; line-height:1.4; }
 .card ul { list-style:none; }
@@ -390,14 +405,14 @@ pre { padding:16px 22px; font-family:"JetBrains Mono","DejaVu Sans Mono",monospa
 <body>
   __BODY__
   <div class="footer">
-    <div class="footer-brand">ERC-8004 Agent Reputation Registry • The Turing Test: Mantle AI Agent Swarm Hackathon</div>
-    <div>Constant-gas fixed-point EMA + oracle-signed scores • github.com/manderson240/erc8004-agent-reputation</div>
+    <div class="footer-brand">ERC-8004 Agent Reputation Registry | The Turing Test (Mantle) &amp; Aevum Track 4</div>
+    <div>Confirmation of Payee &amp; chain-ID ECDSA EMA | 9/9 Foundry + 4/4 pytest | github.com/manderson240/erc8004-agent-reputation</div>
   </div>
 </body></html>"""
 
 
 def _synthesize_audio(text: str, output_mp3: Path) -> None:
-    pocket_bin = shutil.which("pocket-tts") or "/home/mike-anderson/.local/bin/pocket-tts"
+    pocket_bin = shutil.which("pocket-tts") or str(Path.home() / ".local" / "bin" / "pocket-tts")
     sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s.strip()]
     with tempfile.TemporaryDirectory() as td:
         wavs: list[Path] = []
@@ -420,14 +435,17 @@ def _synthesize_audio(text: str, output_mp3: Path) -> None:
 
 
 def main() -> None:
+    chrome_bin = _resolve_chrome_bin()
     out_mp4 = REPO_ROOT / "docs" / "erc8004_reputation_demo.mp4"
     out_mp4.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as td:
         work = Path(td)
+        profile_dir = work / "chrome_profile"
+        profile_dir.mkdir(parents=True, exist_ok=True)
         parts: list[Path] = []
         for scene in SCENES:
             sid = scene["id"]
-            print(f"🎬 Rendering {sid} at {WIDTH}x{HEIGHT} QHD...")
+            print(f"Rendering {sid} at {WIDTH}x{HEIGHT} QHD...")
             html_file = work / f"{sid}.html"
             raw_png = work / f"{sid}_raw.png"
             png_file = work / f"{sid}.png"
@@ -435,7 +453,18 @@ def main() -> None:
             seg_mp4 = work / f"{sid}.mp4"
             html_file.write_text(HTML_TEMPLATE.replace("__BODY__", scene["html_body"]), encoding="utf-8")
             subprocess.run(
-                ["google-chrome", "--headless", "--hide-scrollbars", "--disable-gpu", "--force-device-scale-factor=1", f"--screenshot={raw_png}", f"--window-size={WIDTH},{CHROME_CAPTURE_HEIGHT}", str(html_file)],
+                [
+                    chrome_bin,
+                    "--headless",
+                    "--no-sandbox",
+                    "--hide-scrollbars",
+                    "--disable-gpu",
+                    f"--user-data-dir={profile_dir}",
+                    "--force-device-scale-factor=1",
+                    f"--screenshot={raw_png}",
+                    f"--window-size={WIDTH},{CHROME_CAPTURE_HEIGHT}",
+                    str(html_file),
+                ],
                 check=True,
                 capture_output=True,
             )
