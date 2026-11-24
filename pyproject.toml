@@ -1,11 +1,18 @@
 [project]
 name = "erc8004-agent-reputation"
-version = "0.1.0"
-description = "Verifiable On-Chain AI Agent Identity & Reputation Standard (ERC-8004) on Mantle"
+version = "0.2.0"
+description = "ERC-8004 Verifiable Agent Identity, Confirmation-of-Payee Lookup & Reputation Registry"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "eth-account>=0.13.0",
     "pydantic>=2.0.0",
+    "web3>=7.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
 ]
 
 [build-system]
@@ -16,6 +23,5 @@ build-backend = "hatchling.build"
 packages = ["sdk"]
 
 [tool.pytest.ini_options]
-asyncio_default_fixture_loop_scope = "function"
 pythonpath = ["."]
 testpaths = ["tests"]

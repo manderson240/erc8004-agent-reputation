@@ -29,10 +29,11 @@ contract ERC8004AgentRegistryTest is Test {
         bytes32 agentId,
         uint256 nonce,
         uint256 score,
-        bytes32 rubricHash
+        bytes32 rubricHash,
+        uint256 chainId
     ) internal view returns (uint8 v, bytes32 r, bytes32 s) {
         bytes32 rawHash = keccak256(
-            abi.encodePacked(agentId, nonce, score, rubricHash, address(registry))
+            abi.encodePacked(agentId, nonce, score, rubricHash, chainId, address(registry))
         );
         bytes32 ethSignedHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", rawHash)
@@ -52,9 +53,9 @@ contract ERC8004AgentRegistryTest is Test {
 
     function test_RecordSingleEvaluation() public {
         bytes32 rubric = keccak256("SWE_BENCH_VERIFIED");
-        uint256 score = 9100; // 91.00%
+        uint256 score = 9100;
 
-        (uint8 v, bytes32 r, bytes32 s) = _signEvaluation(testAgentId, 0, score, rubric);
+        (uint8 v, bytes32 r, bytes32 s) = _signEvaluation(testAgentId, 0, score, rubric, block.chainid);
 
         registry.recordEvaluation(testAgentId, score, rubric, v, r, s);
 
@@ -67,13 +68,10 @@ contract ERC8004AgentRegistryTest is Test {
     function test_RecordMultipleEvaluationsEMA() public {
         bytes32 rubric = keccak256("SWE_BENCH_VERIFIED");
 
-        // Evaluation 1: 9000
-        (uint8 v1, bytes32 r1, bytes32 s1) = _signEvaluation(testAgentId, 0, 9000, rubric);
+        (uint8 v1, bytes32 r1, bytes32 s1) = _signEvaluation(testAgentId, 0, 9000, rubric, block.chainid);
         registry.recordEvaluation(testAgentId, 9000, rubric, v1, r1, s1);
 
-        // Evaluation 2: 8000
-        // Expected EMA: 8000 * 0.2 + 9000 * 0.8 = 1600 + 7200 = 8800
-        (uint8 v2, bytes32 r2, bytes32 s2) = _signEvaluation(testAgentId, 1, 8000, rubric);
+        (uint8 v2, bytes32 r2, bytes32 s2) = _signEvaluation(testAgentId, 1, 8000, rubric, block.chainid);
         registry.recordEvaluation(testAgentId, 8000, rubric, v2, r2, s2);
 
         ERC8004AgentRegistry.Agent memory agent = registry.getAgent(testAgentId);
@@ -85,9 +83,8 @@ contract ERC8004AgentRegistryTest is Test {
         bytes32 rubric = keccak256("RUBRIC");
         uint256 score = 9500;
 
-        // Sign with unauthorized key
         bytes32 rawHash = keccak256(
-            abi.encodePacked(testAgentId, uint256(0), score, rubric, address(registry))
+            abi.encodePacked(testAgentId, uint256(0), score, rubric, block.chainid, address(registry))
         );
         bytes32 ethSignedHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", rawHash)
@@ -98,13 +95,51 @@ contract ERC8004AgentRegistryTest is Test {
         registry.recordEvaluation(testAgentId, score, rubric, v, r, s);
     }
 
+    function test_RevertOnWrongChainIdSignature() public {
+        bytes32 rubric = keccak256("RUBRIC");
+        (uint8 v, bytes32 r, bytes32 s) = _signEvaluation(testAgentId, 0, 9200, rubric, 999999);
+
+        vm.expectRevert("Invalid evaluation oracle signature");
+        registry.recordEvaluation(testAgentId, 9200, rubric, v, r, s);
+    }
+
     function test_RevertOnUnregisteredAgent() public {
         bytes32 unknownAgent = keccak256("UNKNOWN_AGENT");
         bytes32 rubric = keccak256("RUBRIC");
-        (uint8 v, bytes32 r, bytes32 s) = _signEvaluation(unknownAgent, 0, 9000, rubric);
+        (uint8 v, bytes32 r, bytes32 s) = _signEvaluation(unknownAgent, 0, 9000, rubric, block.chainid);
 
         vm.expectRevert("Agent does not exist");
         registry.recordEvaluation(unknownAgent, 9000, rubric, v, r, s);
+    }
+
+    function test_VerifyPayeeActiveInactiveAndUnknown() public {
+        (bool verified, bytes32 aid, string memory ep,, uint256 ema,) = registry.verifyPayee(agentDev);
+        assertTrue(verified);
+        assertEq(aid, testAgentId);
+        assertEq(ep, "https://agent.cohezion.ai/v1");
+        assertEq(ema, 0);
+
+        (bool unknownVerified,,,,,) = registry.verifyPayee(address(0x999));
+        assertFalse(unknownVerified);
+
+        vm.prank(agentDev);
+        registry.updateAgent(testAgentId, "https://agent.cohezion.ai/v1", "ipfs://QmAgentCardMetadata123", false);
+
+        (bool inactiveVerified,,,,,) = registry.verifyPayee(agentDev);
+        assertFalse(inactiveVerified);
+    }
+
+    function test_AdminAndOracleRotation() public {
+        address newOracle = vm.addr(0xBEEF2);
+        registry.setEvalOracle(newOracle);
+        assertEq(registry.evalOracle(), newOracle);
+
+        address newAdmin = address(0x500);
+        registry.transferAdmin(newAdmin);
+        assertEq(registry.admin(), newAdmin);
+
+        vm.expectRevert("Only admin");
+        registry.setEvalOracle(oracle);
     }
 
     function testFuzz_EvaluationEMA(uint256 score1, uint256 score2) public {
@@ -113,10 +148,10 @@ contract ERC8004AgentRegistryTest is Test {
 
         bytes32 rubric = keccak256("FUZZ_RUBRIC");
 
-        (uint8 v1, bytes32 r1, bytes32 s1) = _signEvaluation(testAgentId, 0, score1, rubric);
+        (uint8 v1, bytes32 r1, bytes32 s1) = _signEvaluation(testAgentId, 0, score1, rubric, block.chainid);
         registry.recordEvaluation(testAgentId, score1, rubric, v1, r1, s1);
 
-        (uint8 v2, bytes32 r2, bytes32 s2) = _signEvaluation(testAgentId, 1, score2, rubric);
+        (uint8 v2, bytes32 r2, bytes32 s2) = _signEvaluation(testAgentId, 1, score2, rubric, block.chainid);
         registry.recordEvaluation(testAgentId, score2, rubric, v2, r2, s2);
 
         uint256 expectedEma = (score2 * 2000 + score1 * 8000) / 10000;

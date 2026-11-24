@@ -1,29 +1,27 @@
-import pytest
-from sdk.agent_reputation import ERC8004ReputationClient, AgentProfile
+from __future__ import annotations
 
-def test_erc8004_sdk():
-    client = ERC8004ReputationClient(registry_address="0xRegistry123456789012345678901234567890", chain_id=5000)
+from eth_account import Account
+from web3 import Web3
 
-    # Test metadata creation
-    manifest = client.create_agent_manifest(
-        name="MantleSwarmResearcher",
-        description="Autonomous LLM research agent",
-        capabilities=["python", "solidity", "market_analysis"],
-    )
-    assert manifest["standard"] == "ERC-8004"
-    assert "solidity" in manifest["capabilities"]
+from sdk.agent_reputation import AgentProfile, ERC8004ReputationClient
 
-    # Test EMA computation
+
+TEST_REGISTRY = "0x1234567890123456789012345678901234567890"
+ORACLE_KEY = "0x" + "11" * 32
+
+
+def test_erc8004_ema_and_passport() -> None:
+    client = ERC8004ReputationClient(registry_address=TEST_REGISTRY, chain_id=5000)
+
     ema1 = client.compute_updated_ema(current_ema=0, total_evals=0, new_score=9000)
     assert ema1 == 9000
 
     ema2 = client.compute_updated_ema(current_ema=9000, total_evals=1, new_score=8000)
     assert ema2 == 8800
 
-    # Test A2UI Passport generation
     agent = AgentProfile(
-        agent_id="0xAgentHash001",
-        owner_address="0xOwnerAddress123",
+        agent_id="0x" + "aa" * 32,
+        owner_address="0x0000000000000000000000000000000000000400",
         endpoint="https://agent.cohezion.ai",
         metadata_uri="ipfs://QmMetadata123",
         total_evaluations=2,
@@ -35,10 +33,9 @@ def test_erc8004_sdk():
     assert passport["props"]["reputation_score"] == "88.00%"
     assert passport["props"]["badge_color"] == "emerald"
 
-def test_erc8004_ema_boundary_clamping():
-    client = ERC8004ReputationClient(registry_address="0xRegistry123456789012345678901234567890", chain_id=5000)
 
-    # Test extreme boundary clamping in [0, 10000]
+def test_erc8004_ema_boundary_clamping() -> None:
+    client = ERC8004ReputationClient(registry_address=TEST_REGISTRY, chain_id=5000)
     ema_zero = client.compute_updated_ema(current_ema=5000, total_evals=10, new_score=0)
     assert 0 <= ema_zero <= 10000
 
@@ -47,12 +44,29 @@ def test_erc8004_ema_boundary_clamping():
     assert ema_max > 5000
 
 
-def test_erc8004_evaluation_digest_deterministic():
-    client = ERC8004ReputationClient(registry_address="0xRegistry123456789012345678901234567890", chain_id=5000)
-    digest1 = client.compute_evaluation_digest(agent_id="0xAgent1", score=9200, rubric_hash="0xRubric1", nonce=0)
-    digest2 = client.compute_evaluation_digest(agent_id="0xAgent1", score=9200, rubric_hash="0xRubric1", nonce=0)
-    digest3 = client.compute_evaluation_digest(agent_id="0xAgent1", score=9200, rubric_hash="0xRubric1", nonce=1)
+def test_erc8004_solidity_keccak_digest_parity() -> None:
+    client = ERC8004ReputationClient(registry_address=TEST_REGISTRY, chain_id=31337)
+    agent_id = "0x" + Web3.keccak(text="COHEZION_RESEARCH_AGENT_01").hex()
+    rubric = "0x" + Web3.keccak(text="SWE_BENCH_VERIFIED").hex()
 
-    assert digest1 == digest2
-    assert digest1 != digest3
+    expected = "0x" + Web3.solidity_keccak(
+        ["bytes32", "uint256", "uint256", "bytes32", "uint256", "address"],
+        [bytes.fromhex(agent_id[2:]), 0, 9100, bytes.fromhex(rubric[2:]), 31337, TEST_REGISTRY],
+    ).hex()
 
+    got = client.compute_evaluation_digest(agent_id=agent_id, score=9100, rubric_hash=rubric, nonce=0)
+    assert got == expected
+    assert got != client.compute_evaluation_digest(agent_id=agent_id, score=9100, rubric_hash=rubric, nonce=1)
+
+
+def test_erc8004_oracle_ecdsa_sign_and_recover() -> None:
+    client = ERC8004ReputationClient(registry_address=TEST_REGISTRY, chain_id=31337)
+    sig = client.sign_evaluation(
+        agent_id="COHEZION_RESEARCH_AGENT_01",
+        score=9250,
+        rubric_hash="SWE_BENCH_VERIFIED",
+        nonce=0,
+        oracle_private_key=ORACLE_KEY,
+    )
+    recovered = client.recover_oracle_signer(sig)
+    assert recovered == Account.from_key(ORACLE_KEY).address

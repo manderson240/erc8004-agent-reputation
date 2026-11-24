@@ -3,8 +3,8 @@ pragma solidity ^0.8.24;
 
 /**
  * @title ERC8004AgentRegistry
- * @notice Standardized On-Chain AI Agent Identity and Verifiable Reputation Registry.
- * Implements ERC-8004 specifications with EMA-based QAG evaluation tracking.
+ * @notice Standardized On-Chain AI Agent Identity, Confirmation-of-Payee Lookup, and Verifiable Reputation Registry.
+ * Implements ERC-8004 style agent identity and EMA-based QAG evaluation tracking.
  */
 contract ERC8004AgentRegistry {
     struct Agent {
@@ -13,20 +13,22 @@ contract ERC8004AgentRegistry {
         string endpoint;
         string metadataUri;
         uint256 totalEvaluations;
-        uint256 reputationEmaBps; // 0 to 10000 (representing 0.00% to 100.00%)
+        uint256 reputationEmaBps; // 0 to 10000 (0.00% to 100.00%)
         uint256 lastEvaluatedAt;
         bool isActive;
     }
 
-    address public immutable evalOracle;
+    address public evalOracle;
     address public admin;
 
     // agentId => Agent
     mapping(bytes32 => Agent) public agents;
     // agentId => evaluationNonce
     mapping(bytes32 => uint256) public agentNonces;
+    // payee wallet => primary registered agentId (for Confirmation of Payee lookup)
+    mapping(address => bytes32) public ownerToAgentId;
 
-    // EMA weight factor: alpha = 2000 (20.00%) for new evaluation, (10000 - 2000 = 8000) for prior EMA
+    // EMA weight factor: alpha = 2000 (20.00%) for new evaluation, 8000 for prior EMA
     uint256 public constant ALPHA_BPS = 2000;
     uint256 public constant BPS_DENOMINATOR = 10000;
 
@@ -52,6 +54,15 @@ contract ERC8004AgentRegistry {
         bytes32 rubricHash
     );
 
+    event EvalOracleUpdated(address indexed oldOracle, address indexed newOracle);
+    event AdminTransferred(address indexed oldAdmin, address indexed newAdmin);
+    event PrimaryPayeeAgentUpdated(address indexed payee, bytes32 indexed agentId);
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Only admin");
+        _;
+    }
+
     constructor(address _evalOracle) {
         require(_evalOracle != address(0), "Invalid eval oracle address");
         evalOracle = _evalOracle;
@@ -59,7 +70,25 @@ contract ERC8004AgentRegistry {
     }
 
     /**
-     * @notice Registers a new autonomous agent.
+     * @notice Updates the evaluation oracle signer address.
+     */
+    function setEvalOracle(address newOracle) external onlyAdmin {
+        require(newOracle != address(0), "Invalid eval oracle address");
+        emit EvalOracleUpdated(evalOracle, newOracle);
+        evalOracle = newOracle;
+    }
+
+    /**
+     * @notice Transfers admin control to a new address.
+     */
+    function transferAdmin(address newAdmin) external onlyAdmin {
+        require(newAdmin != address(0), "Invalid admin address");
+        emit AdminTransferred(admin, newAdmin);
+        admin = newAdmin;
+    }
+
+    /**
+     * @notice Registers a new autonomous agent and sets primary payee mapping if unset.
      */
     function registerAgent(
         bytes32 agentId,
@@ -80,7 +109,23 @@ contract ERC8004AgentRegistry {
             isActive: true
         });
 
+        if (ownerToAgentId[msg.sender] == bytes32(0)) {
+            ownerToAgentId[msg.sender] = agentId;
+            emit PrimaryPayeeAgentUpdated(msg.sender, agentId);
+        }
+
         emit AgentRegistered(agentId, msg.sender, endpoint, metadataUri);
+    }
+
+    /**
+     * @notice Links the caller's wallet to one of their registered agents for Confirmation of Payee lookup.
+     */
+    function setPayeeAgent(bytes32 agentId) external {
+        Agent storage agent = agents[agentId];
+        require(agent.owner == msg.sender, "Caller is not agent owner");
+        require(agent.isActive, "Agent is inactive");
+        ownerToAgentId[msg.sender] = agentId;
+        emit PrimaryPayeeAgentUpdated(msg.sender, agentId);
     }
 
     /**
@@ -105,12 +150,7 @@ contract ERC8004AgentRegistry {
 
     /**
      * @notice Records an independent verifiable quality evaluation (QAG score) for an agent.
-     * @param agentId Unique agent identifier.
-     * @param qagScore Evaluated score in basis points (0 - 10000).
-     * @param rubricHash Hash of the evaluation dataset/rubric.
-     * @param v ECDSA recovery byte.
-     * @param r ECDSA signature parameter.
-     * @param s ECDSA signature parameter.
+     * @dev Digest binds agentId, nonce, qagScore, rubricHash, block.chainid, and address(this).
      */
     function recordEvaluation(
         bytes32 agentId,
@@ -127,18 +167,16 @@ contract ERC8004AgentRegistry {
 
         uint256 nonce = agentNonces[agentId]++;
 
-        // Verify cryptographic oracle signature over (agentId, nonce, qagScore, rubricHash, address(this))
+        bytes32 rawHash = keccak256(
+            abi.encodePacked(agentId, nonce, qagScore, rubricHash, block.chainid, address(this))
+        );
         bytes32 messageHash = keccak256(
-            abi.encodePacked(
-                "\x19Ethereum Signed Message:\n32",
-                keccak256(abi.encodePacked(agentId, nonce, qagScore, rubricHash, address(this)))
-            )
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", rawHash)
         );
 
         address recovered = ecrecover(messageHash, v, r, s);
-        require(recovered == evalOracle, "Invalid evaluation oracle signature");
+        require(recovered != address(0) && recovered == evalOracle, "Invalid evaluation oracle signature");
 
-        // Calculate Exponential Moving Average (EMA)
         uint256 updatedEma;
         if (agent.totalEvaluations == 0) {
             updatedEma = qagScore;
@@ -151,6 +189,32 @@ contract ERC8004AgentRegistry {
         agent.lastEvaluatedAt = block.timestamp;
 
         emit EvaluationRecorded(agentId, nonce, qagScore, updatedEma, rubricHash);
+    }
+
+    /**
+     * @notice Resolves a payee wallet address against the ERC-8004 agent registry (Confirmation of Payee).
+     */
+    function verifyPayee(address payee)
+        external
+        view
+        returns (
+            bool verified,
+            bytes32 agentId,
+            string memory endpoint,
+            string memory metadataUri,
+            uint256 reputationEmaBps,
+            uint256 totalEvaluations
+        )
+    {
+        bytes32 id = ownerToAgentId[payee];
+        if (id == bytes32(0)) {
+            return (false, bytes32(0), "", "", 0, 0);
+        }
+        Agent storage agent = agents[id];
+        if (!agent.isActive || agent.owner != payee) {
+            return (false, id, agent.endpoint, agent.metadataUri, agent.reputationEmaBps, agent.totalEvaluations);
+        }
+        return (true, id, agent.endpoint, agent.metadataUri, agent.reputationEmaBps, agent.totalEvaluations);
     }
 
     /**
