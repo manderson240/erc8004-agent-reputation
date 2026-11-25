@@ -1,6 +1,6 @@
 # ERC-8004 Agent Reputation Registry
 
-An on-chain agent identity, Confirmation of Payee lookup, and reputation registry designed for Mantle and Aevum Builder Challenge #1 (Track 4 Confirmation of Payee integration).
+An on-chain agent identity, Confirmation of Payee lookup, and reputation registry designed for Mantle and Aevum Builder Challenge #1 (Build 51828, Track 4 Confirmation of Payee integration).
 
 An agent owner registers an agent ID with an endpoint and a metadata URI. A designated evaluation oracle (`evalOracle`) signs QAG quality scores for that agent, and the contract folds each signed score into an exponential moving average (EMA) stored on-chain (`ALPHA_BPS = 2000`, 20% weight per update). The signed message binds `(agentId, nonce, qagScore, rubricHash, block.chainid, address(this))`, blocking cross-chain and duplicate-nonce replay. Callers or payment escrows can call `verifyPayee(address)` for pre-flight Confirmation of Payee verification before transferring funds.
 
@@ -11,6 +11,9 @@ An agent owner registers an agent ID with an endpoint and a metadata URI. A desi
 ```bash
 git clone https://github.com/manderson240/erc8004-agent-reputation.git
 cd erc8004-agent-reputation
+
+# Compile with Shanghai EVM and verify zero Cancun opcodes
+forge build --force && python3 scripts/check_shanghai.py
 
 # Solidity tests (needs Foundry)
 forge test -vv
@@ -23,9 +26,12 @@ uv run pytest -q
 ### Verified test results from my run
 
 ```text
+$ forge build --force && python3 scripts/check_shanghai.py
+OK: 2 bytecode blobs verified Shanghai-safe.
+
 $ forge test -vv
 Ran 9 tests for test/ERC8004AgentRegistry.t.sol:ERC8004AgentRegistryTest
-[PASS] testFuzz_EvaluationEMA(uint256,uint256) (runs: 256, μ: 219169, ~: 219109)
+[PASS] testFuzz_EvaluationEMA(uint256,uint256) (runs: 256, μ: 219250, ~: 219677)
 [PASS] test_AdminAndOracleRotation() (gas: 112436)
 [PASS] test_RecordMultipleEvaluationsEMA() (gas: 217593)
 [PASS] test_RecordSingleEvaluation() (gas: 160953)
@@ -34,10 +40,11 @@ Ran 9 tests for test/ERC8004AgentRegistry.t.sol:ERC8004AgentRegistryTest
 [PASS] test_RevertOnUnregisteredAgent() (gas: 37800)
 [PASS] test_RevertOnWrongChainIdSignature() (gas: 70474)
 [PASS] test_VerifyPayeeActiveInactiveAndUnknown() (gas: 105545)
-Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 17.72ms
+Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 17.10ms (23.05ms CPU time)
 
 $ uv run pytest -q
-4 passed
+....                                                                     [100%]
+4 passed in 0.45s
 ```
 
 ---
@@ -76,28 +83,39 @@ sequenceDiagram
 
 ---
 
-## Deployment
+## Deployment (Aevum Challenge #1 / Build 51828)
 
-`script/DeployERC8004.s.sol` deploys `ERC8004AgentRegistry` to QDay Aevum Testnet (Chain ID `44005`, `evm_version = "shanghai"`, `--legacy` type-0 transactions) using either an encrypted Foundry keystore or `.env` from `.env.example`:
+`foundry.toml` targets `solc_version = "0.8.24"` with `evm_version = "shanghai"` because QDay Aevum Testnet (Chain ID `44005`, RPC `https://rpc-test.qday.info`) runs the Shanghai EVM and requires `--legacy` Type-0 transactions. `scripts/check_shanghai.py` scans the compiled `src/` artifacts and confirms `2` bytecode blobs contain zero Cancun-only opcodes (`BLOBHASH`, `BLOBBASEFEE`, `TLOAD`, `TSTORE`, `MCOPY`).
+
+`script/DeployERC8004.s.sol` deploys `ERC8004AgentRegistry` using either an encrypted Foundry keystore (`cast wallet new aevum-deployer`) or `.env` from `.env.example`:
 
 ```bash
-# Verify Shanghai EVM bytecode safety (no MCOPY/TLOAD/TSTORE/BLOB* opcodes)
+# 1. Verify Shanghai EVM bytecode safety (no MCOPY/TLOAD/TSTORE/BLOB* opcodes)
 forge build --force && python3 scripts/check_shanghai.py
 
-# Recommended: deploy with an encrypted Foundry keystore on Aevum testnet (https://rpc-test.qday.info)
+# 2. Create an encrypted Foundry keystore (recommended)
+cast wallet new aevum-deployer
+
+# 3. Deploy to QDay Aevum Testnet (Chain ID 44005, Type-0 legacy tx)
 forge script script/DeployERC8004.s.sol:DeployERC8004 --rpc-url aevum --broadcast --legacy --account aevum-deployer
 
-# Or with PRIVATE_KEY and AEVUM_RPC_URL in .env
+# Optional fallback using PRIVATE_KEY and AEVUM_RPC_URL from .env
 forge script script/DeployERC8004.s.sol:DeployERC8004 --rpc-url "$AEVUM_RPC_URL" --broadcast --legacy
 ```
 
-QDay's starter kit notes that QDay's internal ERC-8004 registry is still in internal testing and not open for Aevum Builder Challenge #1, so this contract provides a deployable ERC-8004 registry and `verifyPayee(address)` endpoint on Aevum Testnet (`44005`, explorer https://explorer-test.qday.info). I have verified all contracts in Foundry's local EVM (`9/9` tests pass); live Aevum testnet broadcast awaits funding the test wallet via `/faucet` in the QDay Discord.
+QDay's starter kit notes that QDay's internal ERC-8004 registry is still in internal testing and not open for Aevum Builder Challenge #1, so this contract provides a self-deployable ERC-8004 registry and `verifyPayee(address)` endpoint on Aevum Testnet (`44005`, explorer https://explorer-test.qday.info). I have verified all contracts in Foundry's local EVM (`9/9` tests pass) and checked Shanghai bytecode safety (`2` blobs verified); live Aevum testnet broadcast awaits funding the `aevum-deployer` wallet via `/faucet` in the QDay Discord.
 
 ---
 
 ## Hackathon deliverables
 
-- Demo video: [`docs/erc8004_reputation_demo.mp4`](docs/erc8004_reputation_demo.mp4), generated with `python3 scripts/generate_pitch_video.py`
+- Demo video (`170.52s`, under 3 minutes, 2560x1440 QHD): [erc8004_reputation_demo.mp4](https://raw.githubusercontent.com/manderson240/erc8004-agent-reputation/main/docs/erc8004_reputation_demo.mp4) ([`docs/erc8004_reputation_demo.mp4`](docs/erc8004_reputation_demo.mp4), generated with `python3 scripts/generate_pitch_video.py`, `ffprobe` duration `170.522031s`, size `16225773` bytes)
+
+## Future Roadmap
+
+- Broadcast `script/DeployERC8004.s.sol` to QDay Aevum Testnet (Chain ID `44005`) once `aevum-deployer` receives faucet QDAY and publish the deployed address and transaction receipt here.
+- Wire `AevumAgentEscrow` pre-transfer settlement hooks directly into `ERC8004AgentRegistry.verifyPayee(address)` on Chain `44005`.
+- Migrate or bridge registered agent identities and EMA scores once QDay opens its official ERC-8004 registry from internal testing.
 
 ## License
 

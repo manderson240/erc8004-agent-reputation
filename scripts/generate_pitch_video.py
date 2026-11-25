@@ -58,11 +58,11 @@ SCENES = [
     {
         "id": "scene0_title_hero",
         "narration": (
-            "ERC-8004 Agent Reputation Registry. I built an on-chain identity, Confirmation of Payee lookup, "
-            "and constant-gas reputation registry targeting Mantle and Aevum Builder Challenge Track Four. "
-            "Evaluations use oracle-signed EIP-191 keccak digests bound to a per-agent nonce, chain ID, and contract address, "
-            "with admin and oracle key rotation plus pre-flight verifyPayee checks for escrow buyers. "
-            "Nine Foundry tests, including a two hundred fifty-six run fuzz test, and four Solidity-parity Python tests all pass."
+            "ERC-8004 Agent Reputation Registry. I built an on-chain identity, Confirmation of Payee, "
+            "and constant-gas reputation registry for Mantle and Aevum Builder Challenge Track Four. "
+            "Evaluations use oracle-signed EIP-191 keccak digests bound to nonce, chain ID, and contract address, "
+            "with oracle key rotation and pre-flight verifyPayee checks. "
+            "Nine Foundry and four Python tests pass."
         ),
         "html_body": """
             <div class="header" style="text-align:center;margin-top:12px;margin-bottom:24px;">
@@ -102,10 +102,10 @@ SCENES = [
         "id": "scene1_problem_workflow",
         "narration": (
             "Architecture and hardening. "
-            "Step one: An agent owner registers an ID, endpoint, and metadata URI, and sets a primary payee ID if owning multiple agents. "
-            "Step two: Wallets and payment escrows call verifyPayee to confirm an active worker address and inspect its reputation before sending funds. "
-            "Step three: Independent evaluators sign keccak256 digests over agent ID, nonce, score, rubric hash, block.chainid, and contract address. "
-            "Admin rotation lets governance rotate the evalOracle key without redeploying the registry."
+            "Step one: An owner registers an agent ID, endpoint, and metadata URI, and optionally calls setPayeeAgent. "
+            "Step two: Payment escrows call verifyPayee to confirm an active wallet and EMA score before transferring funds. "
+            "Step three: Evaluators sign keccak256 digests over agent ID, nonce, score, rubric hash, block.chainid, and registry address. "
+            "setEvalOracle rotates signers without redeploying."
         ),
         "html_body": """
             <div class="header">
@@ -160,10 +160,10 @@ SCENES = [
     {
         "id": "scene2_core_source_code",
         "narration": (
-            "Here is src/ERC8004AgentRegistry.sol, lines seventy-five through two hundred twenty-two. "
-            "On the left, admin-gated setEvalOracle and transferAdmin rotate governance cleanly, alongside registerAgent and setPayeeAgent. "
-            "On the right, recordEvaluation verifies EIP-191 oracle signatures with block.chainid domain separation "
-            "and updates the constant-gas EMA, followed by verifyPayee for active, inactive, and unknown address lookups."
+            "Here is src/ERC8004AgentRegistry.sol, lines seventy-five to two hundred twenty-two. "
+            "Left: admin-gated setEvalOracle and transferAdmin handle rotation, alongside registerAgent and setPayeeAgent. "
+            "Right: recordEvaluation verifies EIP-191 oracle signatures with block.chainid domain separation "
+            "and updates the constant-gas EMA, followed by verifyPayee lookups."
         ),
         "html_body": f"""
             <div class="header">
@@ -200,10 +200,10 @@ SCENES = [
     {
         "id": "scene3_verifier_source_code",
         "narration": (
-            "Next is sdk/agent_reputation.py, lines one hundred one through one hundred sixty-six. "
-            "compute_evaluation_digest uses Web3.solidity_keccak over the exact Solidity field layout, "
-            "sign_evaluation and recover_oracle_signer create and verify EIP-191 proofs via eth_account, "
-            "verify_payee_rpc calls the contract view directly, and compute_updated_ema matches the Solidity integer math."
+            "Next is sdk/agent_reputation.py, lines one hundred one to one hundred sixty-six. "
+            "compute_evaluation_digest matches Solidity keccak layout, "
+            "sign_evaluation and recover_oracle_signer handle EIP-191 proofs via eth_account, "
+            "verify_payee_rpc queries the contract over RPC, and compute_updated_ema mirrors the integer math."
         ),
         "html_body": f"""
             <div class="header">
@@ -235,7 +235,7 @@ SCENES = [
                     </div>
                     <div class="card success" style="padding:20px;">
                         <h4 style="color:#22c55e;font-size:20px;margin-bottom:6px;">Deployment Ready</h4>
-                        <p style="font-size:17px;">script/DeployERC8004.s.sol is included for Mantle or Aevum broadcast once a funded burner key and starter-kit RPC URL are placed in .env.</p>
+                        <p style="font-size:17px;">script/DeployERC8004.s.sol deploys to Aevum Chain 44005 (https://rpc-test.qday.info) with --legacy and cast wallet new aevum-deployer.</p>
                     </div>
                 </div>
             </div>
@@ -245,9 +245,9 @@ SCENES = [
         "id": "scene4_honest_vs_adversarial_exec",
         "narration": (
             "Side-by-side Foundry tests. "
-            "On the left, EMA evaluation updates to eight thousand eight hundred bps, oracle key rotation transfers authority cleanly, "
-            "and verifyPayee distinguishes active, inactive, and unknown accounts. "
-            "On the right, signatures generated for a different chain ID, wrong signing keys, or unregistered agents revert."
+            "Left: EMA updates to eight thousand eight hundred bps, oracle key rotation transfers authority, "
+            "and verifyPayee handles active, inactive, and unknown accounts. "
+            "Right: wrong chain IDs, invalid signers, and unregistered agents revert."
         ),
         "html_body": """
             <div class="header">
@@ -291,9 +291,9 @@ SCENES = [
         "id": "scene5_verification_and_impact",
         "narration": (
             "Full test results. "
-            "All nine Foundry contract tests, including the two hundred fifty-six run fuzz test, pass in twelve point two five milliseconds. "
-            "All four Python tests verify EMA bounds, keccak digest parity, and ECDSA recovery in zero point four one seconds. "
-            "Reproduce all tests locally from manderson240/erc8004-agent-reputation."
+            "All nine Foundry tests, including the two hundred fifty-six run fuzz test, pass in seventeen point one zero milliseconds. "
+            "All four Python tests verify EMA bounds, keccak parity, and ECDSA recovery in zero point four five seconds. "
+            "Reproduce locally from manderson240/erc8004-agent-reputation."
         ),
         "html_body": """
             <div class="header">
@@ -319,8 +319,8 @@ SCENES = [
                         <p><span class="pass">[PASS]</span> test_RevertOnWrongChainIdSignature() (gas: 70474)</p>
                         <p><span class="pass">[PASS]</span> test_VerifyPayeeActiveInactiveAndUnknown() (gas: 105545)</p>
                         <p class="cmd" style="margin-top:6px;">$ uv run pytest -q</p>
-                        <p><span class="pass">4 passed</span> in 0.41s (EMA bounds, passport, keccak parity, ECDSA recovery)</p>
-                        <p class="success-banner">Foundry 9 passed (12.25ms) | Pytest 4 passed (0.41s)</p>
+                        <p><span class="pass">4 passed</span> in 0.45s (EMA bounds, passport, keccak parity, ECDSA recovery)</p>
+                        <p class="success-banner">Foundry 9 passed (17.10ms) | Pytest 4 passed (0.45s)</p>
                     </div>
                 </div>
                 <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;height:640px;">
@@ -428,7 +428,7 @@ def _synthesize_audio(text: str, output_mp3: Path) -> None:
         clist = Path(td) / "list.txt"
         clist.write_text("\n".join(f"file '{w}'" for w in wavs), encoding="utf-8")
         subprocess.run(
-            ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(clist), "-af", "apad=pad_dur=1.25", "-c:a", "libmp3lame", "-b:a", "192k", str(output_mp3)],
+            ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(clist), "-af", "apad=pad_dur=0.55", "-c:a", "libmp3lame", "-b:a", "192k", str(output_mp3)],
             check=True,
             capture_output=True,
         )
