@@ -78,13 +78,20 @@ sequenceDiagram
 
 ## Deployment
 
-`script/DeployERC8004.s.sol` deploys `ERC8004AgentRegistry` once you configure `.env` from `.env.example` (`PRIVATE_KEY`, `AEVUM_RPC_URL`, optional `EVAL_ORACLE`):
+`script/DeployERC8004.s.sol` deploys `ERC8004AgentRegistry` to QDay Aevum Testnet (Chain ID `44005`, `evm_version = "shanghai"`, `--legacy` type-0 transactions) using either an encrypted Foundry keystore or `.env` from `.env.example`:
 
 ```bash
-forge script script/DeployERC8004.s.sol:DeployERC8004 --rpc-url "$AEVUM_RPC_URL" --broadcast
+# Verify Shanghai EVM bytecode safety (no MCOPY/TLOAD/TSTORE/BLOB* opcodes)
+forge build --force && python3 scripts/check_shanghai.py
+
+# Recommended: deploy with an encrypted Foundry keystore on Aevum testnet (https://rpc-test.qday.info)
+forge script script/DeployERC8004.s.sol:DeployERC8004 --rpc-url aevum --broadcast --legacy --account aevum-deployer
+
+# Or with PRIVATE_KEY and AEVUM_RPC_URL in .env
+forge script script/DeployERC8004.s.sol:DeployERC8004 --rpc-url "$AEVUM_RPC_URL" --broadcast --legacy
 ```
 
-I have verified all contracts in Foundry's local EVM. Live testnet broadcast awaits a funded Aevum or Mantle testnet wallet and starter-kit RPC details.
+QDay's starter kit notes that QDay's internal ERC-8004 registry is still in internal testing and not open for Aevum Builder Challenge #1, so this contract provides a deployable ERC-8004 registry and `verifyPayee(address)` endpoint on Aevum Testnet (`44005`, explorer https://explorer-test.qday.info). I have verified all contracts in Foundry's local EVM (`9/9` tests pass); live Aevum testnet broadcast awaits funding the test wallet via `/faucet` in the QDay Discord.
 
 ---
 

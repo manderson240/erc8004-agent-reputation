@@ -6,15 +6,22 @@ import "../src/ERC8004AgentRegistry.sol";
 
 contract DeployERC8004 is Script {
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address deployerAddr = vm.addr(deployerPrivateKey);
+        uint256 deployerPrivateKey = vm.envOr("PRIVATE_KEY", uint256(0));
+        if (deployerPrivateKey != 0) {
+            vm.startBroadcast(deployerPrivateKey);
+        } else {
+            vm.startBroadcast();
+        }
+        (, address deployerAddr,) = vm.readCallers();
         address evalOracle = vm.envOr("EVAL_ORACLE", deployerAddr);
 
-        vm.startBroadcast(deployerPrivateKey);
         ERC8004AgentRegistry registry = new ERC8004AgentRegistry(evalOracle);
+        vm.stopBroadcast();
+
         console.log("ERC8004AgentRegistry deployed at:", address(registry));
+        console.log("Deployer:", deployerAddr);
         console.log("Eval oracle:", evalOracle);
         console.log("Chain ID:", block.chainid);
-        vm.stopBroadcast();
+        console.log("Explorer: https://explorer-test.qday.info/address/", address(registry));
     }
 }
