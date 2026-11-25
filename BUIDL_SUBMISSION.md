@@ -65,15 +65,18 @@ QDay's starter kit notes that QDay's internal ERC-8004 registry is still in inte
   forge script script/DeployERC8004.s.sol:DeployERC8004 --rpc-url aevum --broadcast --legacy --account aevum-deployer
   ```
 - Local EVM and Shanghai bytecode verification are complete, and **`ERC8004AgentRegistry` is deployed live on QDay Aevum Chain `44005`**:
-  - Contract: [`0x4595b33f41723c6f70F60adf05A69c8D2AB978e2`](https://explorer-test.qday.info/address/0x4595b33f41723c6f70F60adf05A69c8D2AB978e2) (Deploy Tx: [`0xfbf843e0c4b3cb807872fabca096f8883bd3413d81dc193675af703163f2670d`](https://explorer-test.qday.info/tx/0xfbf843e0c4b3cb807872fabca096f8883bd3413d81dc193675af703163f2670d))
-  - Live payee registration (`agentId` `0x2c7fb9c0b01fe7e7c8a2bba8097381ca1ffb43a320301373c1633b9792c65fda`): [`0x0de99e26e50d436f849b026b6ba5555b9a2a7b0ab46cded74f986c5efeec2c1d`](https://explorer-test.qday.info/tx/0x0de99e26e50d436f849b026b6ba5555b9a2a7b0ab46cded74f986c5efeec2c1d) (block `4118216`), wired directly to `AevumAgentEscrow` (`0xFF26781D65a8D7589699B6bcd4Cb137Bf67A7d64`).
+  - Contract: [`0x4595b33f41723c6f70F60adf05A69c8D2AB978e2`](https://explorer-test.qday.info/address/0x4595b33f41723c6f70F60adf05A69c8D2AB978e2) (Deploy CREATE Tx: [`0xfbf843e0c4b3cb807872fabca096f8883bd3413d81dc193675af703163f2670d`](https://explorer-test.qday.info/tx/0xfbf843e0c4b3cb807872fabca096f8883bd3413d81dc193675af703163f2670d))
+  - Exact deployed source commit (because explorer verification is offline): [`src/ERC8004AgentRegistry.sol` @ `86e2bc1`](https://github.com/manderson240/erc8004-agent-reputation/blob/86e2bc1f49b52a05000d1218b528381dcce5c873/src/ERC8004AgentRegistry.sol)
+  - Live payee registration (`agentId` `0x2c7fb9c0b01fe7e7c8a2bba8097381ca1ffb43a320301373c1633b9792c65fda`): [`0x0de99e26e50d436f849b026b6ba5555b9a2a7b0ab46cded74f986c5efeec2c1d`](https://explorer-test.qday.info/tx/0x0de99e26e50d436f849b026b6ba5555b9a2a7b0ab46cded74f986c5efeec2c1d) (block `4118216`), wired into `AevumAgentEscrow` (`0xFF26781D65a8D7589699B6bcd4Cb137Bf67A7d64`, CREATE Tx [`0x456d4103...`](https://explorer-test.qday.info/tx/0x456d4103e6c983dbcb3519dbd363428345fc0d8da48b3ca93fb135284eee461a)).
+  - Live EIP-191 `recordEvaluation` Tx (`score = 9200` bps / `92.00%` EMA, `totalEvaluations = 1`): [`0x5226bbb51ed1a408021195f07b7070a795632a67b8b87a5418e75d786e7a9d31`](https://explorer-test.qday.info/tx/0x5226bbb51ed1a408021195f07b7070a795632a67b8b87a5418e75d786e7a9d31) (block `4119030`).
 
 ### Verification
 - `forge build --force && python3 scripts/check_shanghai.py`: `OK: 2 bytecode blobs verified Shanghai-safe.`
 - `forge test -vv`: 9 of 9 Foundry tests pass in 17.10ms (23.05ms CPU time), including wrong-`chainId` revert tests, invalid signer and unregistered agent revert tests, admin/oracle rotation, `verifyPayee` active/inactive/unknown checks, and a 256-run EMA fuzz test (`testFuzz_EvaluationEMA`).
 - `uv run pytest -q`: 4 of 4 Python tests pass in 0.45s, verifying Solidity keccak digest parity, ECDSA signing/recovery, EMA bounds, and A2UI passport output.
 - Demo video: `docs/erc8004_reputation_demo.mp4` (`170.52s`, `170.522031s` via `ffprobe`, `16225773` bytes), hosted at https://raw.githubusercontent.com/manderson240/erc8004-agent-reputation/main/docs/erc8004_reputation_demo.mp4.
+- Third-party dependency notices: [`NOTICE.md`](NOTICE.md) (MIT license).
 
 ### Future Roadmap
-- Record live EIP-191 `recordEvaluation` score updates alongside `AevumAgentEscrow` settlements on Chain `44005`.
+- Add multi-oracle quorum aggregation across specialized evaluation signers while keeping constant-slot on-chain EMA storage.
 - Migrate or bridge registered agent identities and EMA scores to QDay's official ERC-8004 registry once QDay promotes it out of internal testing, and prepare Q1 2027 mainnet adapters.

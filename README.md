@@ -106,21 +106,25 @@ forge script script/DeployERC8004.s.sol:DeployERC8004 --rpc-url "$AEVUM_RPC_URL"
 QDay's starter kit notes that QDay's internal ERC-8004 registry is still in internal testing and not open for Aevum Builder Challenge #1, so this contract provides a self-deployable ERC-8004 registry and `verifyPayee(address)` endpoint on Aevum Testnet (`44005`, explorer https://explorer-test.qday.info). All Foundry checks (`9/9` pass) and Shanghai bytecode checks (`2` blobs verified) pass, and `ERC8004AgentRegistry` is now **deployed live on QDay Aevum Chain `44005`**:
 
 - **Live `ERC8004AgentRegistry` (Chain 44005)**: [`0x4595b33f41723c6f70F60adf05A69c8D2AB978e2`](https://explorer-test.qday.info/address/0x4595b33f41723c6f70F60adf05A69c8D2AB978e2)
+- **Exact Deployed Source Commit** (because Aevum Blockscout source verification is temporarily offline): [`src/ERC8004AgentRegistry.sol` @ `86e2bc1`](https://github.com/manderson240/erc8004-agent-reputation/blob/86e2bc1f49b52a05000d1218b528381dcce5c873/src/ERC8004AgentRegistry.sol)
 - **Deployer & `evalOracle`**: `0x030e513B96A0B419942f4D6ECB250f172344585e`
-- **Deployment Tx**: [`0xfbf843e0c4b3cb807872fabca096f8883bd3413d81dc193675af703163f2670d`](https://explorer-test.qday.info/tx/0xfbf843e0c4b3cb807872fabca096f8883bd3413d81dc193675af703163f2670d)
-- **Live Agent Registration + Escrow Wire**: Registered payee `agentId` `0x2c7fb9c0b01fe7e7c8a2bba8097381ca1ffb43a320301373c1633b9792c65fda` ([`0x0de99e26e50d436f849b026b6ba5555b9a2a7b0ab46cded74f986c5efeec2c1d`](https://explorer-test.qday.info/tx/0x0de99e26e50d436f849b026b6ba5555b9a2a7b0ab46cded74f986c5efeec2c1d), block `4118216`) and wired into live `AevumAgentEscrow` (`0xFF26781D65a8D7589699B6bcd4Cb137Bf67A7d64`) for real `1.0 tUSD8` settlement.
+- **Deployment CREATE Tx**: [`0xfbf843e0c4b3cb807872fabca096f8883bd3413d81dc193675af703163f2670d`](https://explorer-test.qday.info/tx/0xfbf843e0c4b3cb807872fabca096f8883bd3413d81dc193675af703163f2670d)
+- **Live Agent Registration**: Registered payee `agentId` `0x2c7fb9c0b01fe7e7c8a2bba8097381ca1ffb43a320301373c1633b9792c65fda` ([`0x0de99e26e50d436f849b026b6ba5555b9a2a7b0ab46cded74f986c5efeec2c1d`](https://explorer-test.qday.info/tx/0x0de99e26e50d436f849b026b6ba5555b9a2a7b0ab46cded74f986c5efeec2c1d), block `4118216`)
+- **Live EIP-191 `recordEvaluation` Tx**: Recorded score `9200` bps (`92.00%`, rubric `TASK-AEVUM-LIVE-1795639978-QAG-RUBRIC-V1`) on-chain ([`0x5226bbb51ed1a408021195f07b7070a795632a67b8b87a5418e75d786e7a9d31`](https://explorer-test.qday.info/tx/0x5226bbb51ed1a408021195f07b7070a795632a67b8b87a5418e75d786e7a9d31), block `4119030`, `gasUsed: 125216`), updating `verifyPayee` to `reputationEmaBps = 9200`, `totalEvaluations = 1`.
+- **Wired `AevumAgentEscrow`**: [`0xFF26781D65a8D7589699B6bcd4Cb137Bf67A7d64`](https://explorer-test.qday.info/address/0xFF26781D65a8D7589699B6bcd4Cb137Bf67A7d64) (CREATE Tx [`0x456d4103...`](https://explorer-test.qday.info/tx/0x456d4103e6c983dbcb3519dbd363428345fc0d8da48b3ca93fb135284eee461a), `setPayeeRegistry` Tx [`0xe5c10a87...`](https://explorer-test.qday.info/tx/0xe5c10a87ddda1a661ab4f0df5899cfdd0c4224177ec9558cccce78c9993e5d51)).
 
 ---
 
 ## Hackathon deliverables
 
 - Demo video (`170.52s`, under 3 minutes, 2560x1440 QHD): [erc8004_reputation_demo.mp4](https://raw.githubusercontent.com/manderson240/erc8004-agent-reputation/main/docs/erc8004_reputation_demo.mp4) ([`docs/erc8004_reputation_demo.mp4`](docs/erc8004_reputation_demo.mp4), generated with `python3 scripts/generate_pitch_video.py`, `ffprobe` duration `170.522031s`, size `16225773` bytes)
+- Third-party notices: [`NOTICE.md`](NOTICE.md)
 
 ## Future Roadmap
 
-- Add live EIP-191 `recordEvaluation` score updates tied to completed `AevumAgentEscrow` settlements on Chain `44005`.
+- Add multi-oracle quorum aggregation across specialized evaluation signers while preserving single-slot EMA storage cost.
 - Migrate or bridge registered agent identities and EMA scores once QDay opens its official ERC-8004 registry from internal testing, and prepare Q1 2027 QDay mainnet support.
 
 ## License
 
-MIT
+MIT (see [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md))
