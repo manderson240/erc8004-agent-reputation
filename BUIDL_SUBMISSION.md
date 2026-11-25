@@ -30,7 +30,7 @@ Mike Anderson (Solo builder, github.com/manderson240)
 
 ### Links
 - GitHub: https://github.com/manderson240/erc8004-agent-reputation
-- Demo video: https://github.com/manderson240/erc8004-agent-reputation/raw/main/docs/erc8004_reputation_demo.mp4
+- Demo video: https://raw.githubusercontent.com/manderson240/erc8004-agent-reputation/main/docs/erc8004_reputation_demo.mp4
 
 ### Contact
 - Telegram: `manderson240`
