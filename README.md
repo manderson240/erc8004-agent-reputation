@@ -103,7 +103,12 @@ forge script script/DeployERC8004.s.sol:DeployERC8004 --rpc-url aevum --broadcas
 forge script script/DeployERC8004.s.sol:DeployERC8004 --rpc-url "$AEVUM_RPC_URL" --broadcast --legacy
 ```
 
-QDay's starter kit notes that QDay's internal ERC-8004 registry is still in internal testing and not open for Aevum Builder Challenge #1, so this contract provides a self-deployable ERC-8004 registry and `verifyPayee(address)` endpoint on Aevum Testnet (`44005`, explorer https://explorer-test.qday.info). I have verified all contracts in Foundry's local EVM (`9/9` tests pass) and checked Shanghai bytecode safety (`2` blobs verified); live Aevum testnet broadcast awaits funding the `aevum-deployer` wallet via `/faucet` in the QDay Discord.
+QDay's starter kit notes that QDay's internal ERC-8004 registry is still in internal testing and not open for Aevum Builder Challenge #1, so this contract provides a self-deployable ERC-8004 registry and `verifyPayee(address)` endpoint on Aevum Testnet (`44005`, explorer https://explorer-test.qday.info). All Foundry checks (`9/9` pass) and Shanghai bytecode checks (`2` blobs verified) pass, and `ERC8004AgentRegistry` is now **deployed live on QDay Aevum Chain `44005`**:
+
+- **Live `ERC8004AgentRegistry` (Chain 44005)**: [`0x4595b33f41723c6f70F60adf05A69c8D2AB978e2`](https://explorer-test.qday.info/address/0x4595b33f41723c6f70F60adf05A69c8D2AB978e2)
+- **Deployer & `evalOracle`**: `0x030e513B96A0B419942f4D6ECB250f172344585e`
+- **Deployment Tx**: [`0xfbf843e0c4b3cb807872fabca096f8883bd3413d81dc193675af703163f2670d`](https://explorer-test.qday.info/tx/0xfbf843e0c4b3cb807872fabca096f8883bd3413d81dc193675af703163f2670d)
+- **Live Agent Registration + Escrow Wire**: Registered payee `agentId` `0x2c7fb9c0b01fe7e7c8a2bba8097381ca1ffb43a320301373c1633b9792c65fda` ([`0x0de99e26e50d436f849b026b6ba5555b9a2a7b0ab46cded74f986c5efeec2c1d`](https://explorer-test.qday.info/tx/0x0de99e26e50d436f849b026b6ba5555b9a2a7b0ab46cded74f986c5efeec2c1d), block `4118216`) and wired into live `AevumAgentEscrow` (`0xFF26781D65a8D7589699B6bcd4Cb137Bf67A7d64`) for real `1.0 tUSD8` settlement.
 
 ---
 
@@ -113,9 +118,8 @@ QDay's starter kit notes that QDay's internal ERC-8004 registry is still in inte
 
 ## Future Roadmap
 
-- Broadcast `script/DeployERC8004.s.sol` to QDay Aevum Testnet (Chain ID `44005`) once `aevum-deployer` receives faucet QDAY and publish the deployed address and transaction receipt here.
-- Wire `AevumAgentEscrow` pre-transfer settlement hooks directly into `ERC8004AgentRegistry.verifyPayee(address)` on Chain `44005`.
-- Migrate or bridge registered agent identities and EMA scores once QDay opens its official ERC-8004 registry from internal testing.
+- Add live EIP-191 `recordEvaluation` score updates tied to completed `AevumAgentEscrow` settlements on Chain `44005`.
+- Migrate or bridge registered agent identities and EMA scores once QDay opens its official ERC-8004 registry from internal testing, and prepare Q1 2027 QDay mainnet support.
 
 ## License
 
